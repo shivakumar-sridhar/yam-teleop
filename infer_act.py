@@ -104,6 +104,16 @@ def main():
         return np.asarray(action.squeeze(0).cpu(), dtype=np.float32) if action.ndim > 1 \
             else np.asarray(action.cpu(), dtype=np.float32)
 
+    def publish_action(action, state):
+        try:
+            with open("/dev/shm/infer_action.json.tmp", "w") as f:
+                json.dump({"action": [round(float(x), 4) for x in action],
+                           "state": [round(float(x), 4) for x in state],
+                           "dry_run": args.dry_run, "t": time.time()}, f)
+            os.replace("/dev/shm/infer_action.json.tmp", "/dev/shm/infer_action.json")
+        except Exception:
+            pass
+
     dt = 1.0 / args.hz
     print(f"[{'DRY-RUN' if args.dry_run else 'LIVE'}] inference @ {args.hz}Hz. "
           + ("printing actions, no motion." if args.dry_run else "commanding YAMs."), flush=True)
@@ -129,6 +139,7 @@ def main():
         while args.seconds <= 0 or time.time() - t0 < args.seconds:
             state = read_state()
             action = infer(state)
+            publish_action(action, state)   # -> /dev/shm/infer_action.json (dashboard reads this)
             if args.dry_run:
                 if frame % max(1, int(args.hz)) == 0:  # ~1 Hz print
                     print("action=[" + " ".join(f"{v:+.2f}" for v in action) + "]", flush=True)

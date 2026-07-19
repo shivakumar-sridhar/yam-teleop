@@ -200,8 +200,15 @@ def infer_status():
         m = re.search(r"--checkpoint (\S+)", cl)
         ck = m.group(1) if m else "?"
         parts = ck.split(os.sep)
-        return {"running": True, "dry_run": "--dry-run" in cl,
-                "checkpoint": f"{parts[-3]}/{parts[-1]}" if len(parts) >= 3 else ck}
+        st = {"running": True, "dry_run": "--dry-run" in cl,
+              "checkpoint": f"{parts[-3]}/{parts[-1]}" if len(parts) >= 3 else ck}
+        try:
+            d = json.load(open("/dev/shm/infer_action.json"))
+            if time.time() - d.get("t", 0) < 2.0:
+                st["action"] = d.get("action")
+        except Exception:
+            pass
+        return st
     return {"running": False}
 
 
@@ -218,9 +225,9 @@ def start_inference(name, dry_run):
            "--checkpoint", ckpt, "--channels", "can0,can1"]
     if dry_run:
         cmd.append("--dry-run")
-    subprocess.Popen(cmd, cwd=REPO, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
-    return f"inference {'(dry-run) ' if dry_run else '(LIVE) '}starting: {name}"
+    log = open(os.path.join(REPO, "infer.log"), "w")  # tail this for raw output
+    subprocess.Popen(cmd, cwd=REPO, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    return f"inference {'(dry-run) ' if dry_run else '(LIVE) '}starting: {name} (loads in ~10s)"
 
 
 def stop_inference():
@@ -371,9 +378,17 @@ async function refresh(){
   sel.innerHTML = cks.length ? cks.map(c => '<option>'+c.name+'</option>').join('') : '<option>no checkpoints</option>';
   if (cur && cks.some(c => c.name === cur)) sel.value = cur;
   const inf = s.inference || {running:false};
-  document.getElementById('infstatus').innerHTML = inf.running
+  let ih = inf.running
     ? dot('ok') + (inf.dry_run ? 'DRY-RUN · ' : '● LIVE · ') + 'policy ' + inf.checkpoint
     : dot('idle') + 'idle';
+  if (inf.running && inf.action) {
+    const a = inf.action, f = arr => arr.map(v => (v>=0?'+':'')+v.toFixed(2)).join(' ');
+    ih += '<div style="font-family:monospace;font-size:11px;color:#7fd8a0;margin-top:4px">'
+        + 'can0 ['+f(a.slice(0,7))+']<br>can1 ['+f(a.slice(7,14))+']</div>';
+  } else if (inf.running) {
+    ih += ' <span class="sub">(loading / waiting for first prediction…)</span>';
+  }
+  document.getElementById('infstatus').innerHTML = ih;
 }
 function runInfer(){
   const ck = document.getElementById('ckpt').value;
