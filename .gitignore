@@ -1,0 +1,14 @@
+# recorded data (goes to HuggingFace, not git)
+episodes/
+cam_snapshots/
+# training outputs / checkpoints
+outputs/
+wandb/
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# scratch
+*.log
+*.rrd

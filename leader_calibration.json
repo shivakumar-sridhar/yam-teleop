@@ -1,0 +1,64 @@
+{
+  "5AE6080681": {
+    "serial_id": "usb-1a86_USB_Single_Serial_5AE6080681-if00",
+    "last_port": "/dev/ttyACM1",
+    "calibrated_at": "2026-07-18T16:54:35",
+    "ranges": {
+      "pan": [
+        838,
+        3441
+      ],
+      "lift": [
+        892,
+        3055
+      ],
+      "elbow": [
+        1048,
+        3220
+      ],
+      "wrist_flex": [
+        747,
+        3051
+      ],
+      "wrist_roll": [
+        199,
+        4031
+      ],
+      "gripper": [
+        1716,
+        2890
+      ]
+    }
+  },
+  "5B14115162": {
+    "serial_id": "usb-1a86_USB_Single_Serial_5B14115162-if00",
+    "last_port": "/dev/ttyACM2",
+    "calibrated_at": "2026-07-18T16:58:39",
+    "ranges": {
+      "pan": [
+        769,
+        3263
+      ],
+      "lift": [
+        913,
+        3263
+      ],
+      "elbow": [
+        847,
+        3048
+      ],
+      "wrist_flex": [
+        787,
+        3142
+      ],
+      "wrist_roll": [
+        139,
+        3862
+      ],
+      "gripper": [
+        1544,
+        2932
+      ]
+    }
+  }
+}
