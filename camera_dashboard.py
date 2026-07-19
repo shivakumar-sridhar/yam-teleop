@@ -21,6 +21,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import cv2
 import numpy as np
 import pyrealsense2 as rs
 import rerun as rr
@@ -303,6 +304,13 @@ def main():
                     img = np.asanyarray(color.get_data())  # HxWx3 rgb8
                     rr.log(f"{name}/color", rr.Image(img))
                     rec.update_frame(name, img)
+                    # publish latest frame to /dev/shm for the inference process
+                    ok, buf = cv2.imencode(".jpg", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+                    if ok:
+                        tmp = f"/dev/shm/cam_{name}.jpg.tmp"
+                        with open(tmp, "wb") as fh:
+                            fh.write(buf.tobytes())
+                        os.replace(tmp, f"/dev/shm/cam_{name}.jpg")
                 depth = fs.get_depth_frame()
                 if depth:
                     d = np.asanyarray(depth.get_data())  # z16

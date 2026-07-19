@@ -40,11 +40,25 @@ def main():
     ap.add_argument("--task", default="bimanual teleoperation")
     ap.add_argument("--robot-type", default="yam_bimanual_so101_leader")
     ap.add_argument("--limit", type=int, default=0, help="only convert first N episodes (0 = all)")
+    ap.add_argument("--episodes", default="", help="only these episode indices, e.g. 7,8,12-19")
     ap.add_argument("--push", action="store_true")
     ap.add_argument("--private", action="store_true")
     args = ap.parse_args()
 
     eps = sorted(glob.glob(os.path.join(args.src, "episode_*")))
+    if args.episodes:
+        keep = set()
+        for part in args.episodes.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                a, b = part.split("-")
+                keep.update(range(int(a), int(b) + 1))
+            else:
+                keep.add(int(part))
+        eps = [e for e in eps if int(os.path.basename(e).split("_")[1]) in keep]
+        print(f"filtering to {len(eps)} episodes: {sorted(keep)}")
     if args.limit:
         eps = eps[: args.limit]
     if not eps:
