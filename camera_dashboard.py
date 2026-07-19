@@ -248,7 +248,8 @@ def main():
             rrb.Vertical(
                 view(top[0]),                                  # scene, full width
                 rrb.Horizontal(*[view(r) for r in wrists]),    # wrists side-by-side
-                row_shares=[1, 1],                             # top half / bottom half
+                rrb.TimeSeriesView(origin="policy", name="ACT policy — predicted action & state"),
+                row_shares=[2, 2, 1.6],
             ),
             collapse_panels=True,
         )
@@ -316,6 +317,18 @@ def main():
                     d = np.asanyarray(depth.get_data())  # z16
                     meter = (1.0 / scale) if scale else 1000.0
                     rr.log(f"{name}/depth", rr.DepthImage(d, meter=meter))
+            # overlay live ACT policy predictions (published by infer_act.py) as time-series
+            try:
+                d = json.load(open("/dev/shm/infer_action.json"))
+                if time.time() - d.get("t", 0) < 2.0:
+                    jn = [f"{ch}_{j}" for ch in ("can0", "can1")
+                          for j in ("j1", "j2", "j3", "j4", "j5", "j6", "grip")]
+                    for nm, av in zip(jn, d.get("action", [])):
+                        rr.log(f"policy/action/{nm}", rr.Scalars(float(av)))
+                    for nm, sv in zip(jn, d.get("state", [])):
+                        rr.log(f"policy/state/{nm}", rr.Scalars(float(sv)))
+            except Exception:
+                pass
             rec.maybe_sample()
             frame += 1
             if time.time() - last_report > 2.0:
