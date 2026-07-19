@@ -231,8 +231,21 @@ def start_inference(name, dry_run):
 
 
 def stop_inference():
-    n = _kill("infer_act.py")
-    return f"stopped {n} inference process(es)"
+    # SIGINT triggers infer_act's reset-to-home in its finally block; give it time
+    n = 0
+    for pid, _ in procs_matching("infer_act.py"):
+        try:
+            os.kill(pid, signal.SIGINT)
+            n += 1
+        except Exception:
+            pass
+    time.sleep(4)  # allow the ~2.5s slow-move-to-home to complete
+    for pid, _ in procs_matching("infer_act.py"):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+    return f"stopped {n} inference — arms returning to home"
 
 
 # ------------------------------------------------------------------ status

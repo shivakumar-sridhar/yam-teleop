@@ -118,8 +118,10 @@ def main():
     print(f"[{'DRY-RUN' if args.dry_run else 'LIVE'}] inference @ {args.hz}Hz. "
           + ("printing actions, no motion." if args.dry_run else "commanding YAMs."), flush=True)
 
-    # LIVE: slow-move each YAM from current pose to the first predicted action
+    # LIVE: slow-move each YAM from current pose to the first predicted action.
+    # Capture the starting pose as "home" so we can return to it on stop/failure.
     prev = read_state()
+    home = prev.copy()
     if not args.dry_run:
         first = infer(prev)
         print(f"first action: {np.round(first,2)}  (slow-moving there)", flush=True)
@@ -152,14 +154,29 @@ def main():
             time.sleep(dt)
     except KeyboardInterrupt:
         print("\ninterrupted", flush=True)
+    except Exception as e:
+        print(f"\ninference error: {e}", flush=True)
     finally:
         if robots is not None:
+            # return to the home position (where inference started), then go limp
+            try:
+                cur = read_state()
+                steps = max(1, int(2.5 / dt))
+                for i in range(1, steps + 1):
+                    a = i / steps
+                    cmd = cur * (1 - a) + home * a
+                    for k, ch in enumerate(channels):
+                        robots[ch].command_joint_pos(cmd[k*NJ:(k+1)*NJ])
+                    time.sleep(dt)
+                print("reset to home position.", flush=True)
+            except Exception as e:
+                print(f"home reset failed: {e}", flush=True)
             for ch, r in robots.items():
                 try:
                     r.enter_gravity_comp_idle()
                 except Exception:
                     pass
-            print("YAMs returned to gravity-comp idle.", flush=True)
+            print("YAMs at home, gravity-comp idle.", flush=True)
     print("[done]", flush=True)
 
 
